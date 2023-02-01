@@ -1,6 +1,10 @@
 package net.mguenther.reactive.employee;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 
 public class EmployeeCreatedEvent extends EmployeeEvent {
 
@@ -18,13 +22,14 @@ public class EmployeeCreatedEvent extends EmployeeEvent {
 
     private final String company;
 
-    public EmployeeCreatedEvent(final String employeeId,
-                            final String givenName,
-                            final String lastName,
-                            final String email,
-                            final String departmentName,
-                            final String departmentDescription,
-                            final String company) {
+    @JsonCreator
+    public EmployeeCreatedEvent(@JsonProperty("employeeId") final String employeeId,
+                                @JsonProperty("givenName") final String givenName,
+                                @JsonProperty("lastName") final String lastName,
+                                @JsonProperty("email") final String email,
+                                @JsonProperty("departmentName") final String departmentName,
+                                @JsonProperty("departmentDescription") final String departmentDescription,
+                                @JsonProperty("company") final String company) {
         this.employeeId = employeeId;
         this.givenName = givenName;
         this.lastName = lastName;
@@ -63,8 +68,14 @@ public class EmployeeCreatedEvent extends EmployeeEvent {
     }
 
     public static void main(String[] args) throws Exception {
+
         ObjectMapper mapper = new ObjectMapper();
+        PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder().build();
+        mapper.activateDefaultTyping(ptv); // default to using DefaultTyping.OBJECT_AND_NON_CONCRETE
+        mapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL);
         EmployeeCreatedEvent event = new EmployeeCreatedEvent("1", "Max", "Mustermann", "max.mustermann@musterhaus.de", "Musterabteilung", "Mustererkennung", "Musterfirma");
-        System.out.println(mapper.writeValueAsString(event));
+        String s = mapper.writeValueAsString(event);
+        EmployeeEvent e = mapper.readValue(s, EmployeeEvent.class);
+        System.out.println(e);
     }
 }

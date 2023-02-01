@@ -1,31 +1,27 @@
 package net.mguenther.reactive.employee;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import org.apache.kafka.common.errors.SerializationException;
-import org.apache.kafka.common.serialization.Serializer;
+import org.apache.kafka.common.serialization.Deserializer;
 
-public class EmployeeEventSerializer implements Serializer<EmployeeEvent> {
+public class EmployeeEventDeserializer implements Deserializer<EmployeeEvent> {
 
     private final ObjectMapper mapper;
 
-    public EmployeeEventSerializer() {
+    public EmployeeEventDeserializer() {
         final PolymorphicTypeValidator validator = BasicPolymorphicTypeValidator.builder().build();
         mapper = new ObjectMapper();
         mapper.activateDefaultTyping(validator, ObjectMapper.DefaultTyping.NON_FINAL);
     }
 
     @Override
-    public byte[] serialize(final String topic, final EmployeeEvent event) {
-
-        if (event == null) throw new SerializationException("Given record payload must not be null.");
-
+    public EmployeeEvent deserialize(final String topic, final byte[] bytes) {
         try {
-            return mapper.writeValueAsBytes(event);
-        } catch (JsonProcessingException e) {
-            throw new SerializationException("Unable to serialize record payload to byte[].", e);
+            return mapper.readValue(bytes, EmployeeEvent.class);
+        } catch (Exception e) {
+            throw new SerializationException("Unable to deserialize record payload into sub-type of the employee event protocol.", e);
         }
     }
 }

@@ -1,5 +1,7 @@
 package net.mguenther.reactive.employee;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -28,7 +30,9 @@ abstract public class EmployeeEvent {
         this(generateEventId(), now());
     }
 
-    public EmployeeEvent(final String eventId, final long eventTime) {
+    @JsonCreator
+    public EmployeeEvent(@JsonProperty("eventId") final String eventId,
+                         @JsonProperty("eventTime") final long eventTime) {
         this.eventId = eventId;
         this.eventTime = eventTime;
     }
