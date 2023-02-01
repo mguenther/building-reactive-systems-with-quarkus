@@ -3,9 +3,13 @@ package net.mguenther.reactive.employee;
 import io.quarkus.hibernate.reactive.panache.Panache;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.reactive.messaging.MutinyEmitter;
+import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata;
 import net.mguenther.reactive.ExceptionMapper;
 import net.mguenther.reactive.department.Department;
 import net.mguenther.reactive.department.DepartmentManager;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Message;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -23,12 +27,17 @@ import javax.ws.rs.core.Response;
 @ApplicationScoped
 public class EmployeeResource {
 
+    private final MutinyEmitter<EmployeeEvent> eventEmitter;
+
     private final DepartmentManager departments;
 
     private final ExceptionMapper exceptionMapper;
 
     @Inject
-    public EmployeeResource(final DepartmentManager departments, final ExceptionMapper exceptionMapper) {
+    public EmployeeResource(@Channel("employee-events") final MutinyEmitter<EmployeeEvent> eventEmitter,
+                            final DepartmentManager departments,
+                            final ExceptionMapper exceptionMapper) {
+        this.eventEmitter = eventEmitter;
         this.departments = departments;
         this.exceptionMapper = exceptionMapper;
     }
@@ -57,7 +66,10 @@ public class EmployeeResource {
                 .all()
                 .unis(Employee.accept(command), departments.findByName(command.getDepartment()))
                 .combinedWith(this::merge)
-                .map(outgoingEmployee -> Response.ok(outgoingEmployee).status(Response.Status.CREATED).build())
+                .map(outgoingEmployee -> {
+                    onEmployeeCreated(outgoingEmployee);
+                    return Response.ok(outgoingEmployee).status(Response.Status.CREATED).build();
+                })
                 .onFailure().recoverWithItem(exceptionMapper::handle);
     }
 
@@ -73,15 +85,43 @@ public class EmployeeResource {
         );
     }
 
+    private void onEmployeeCreated(final OutgoingEmployee e) {
+        final EmployeeEvent event = new EmployeeCreatedEvent(
+                e.getEmployeeId(),
+                e.getGivenName(),
+                e.getLastName(),
+                e.getEmail(),
+                e.getDepartmentName(),
+                e.getDepartmentDescription(),
+                e.getCompany());
+        final OutgoingKafkaRecordMetadata<String> metadata = OutgoingKafkaRecordMetadata.<String>builder()
+                .withTopic("employee-events")
+                .withKey(e.getEmployeeId())
+                .build();
+        eventEmitter.send(Message.of(event).addMetadata(metadata));
+    }
+
     @DELETE
     @Path("/{employeeId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Uni<Response> deleteEmployee(@PathParam("employeeId") final String employeeId) {
         return Panache
                 .withTransaction(() -> Employee.deleteById(employeeId))
-                .map(deleted -> deleted
-                        ? Response.ok().status(Response.Status.NO_CONTENT).build()
-                        : Response.ok().status(Response.Status.NOT_FOUND).build())
+                .map(deleted -> {
+                    onEmployeeDeleted(employeeId);
+                    return deleted
+                            ? Response.ok().status(Response.Status.NO_CONTENT).build()
+                            : Response.ok().status(Response.Status.NOT_FOUND).build();
+                })
                 .onFailure().recoverWithItem(exceptionMapper::handle);
+    }
+
+    private void onEmployeeDeleted(final String employeeId) {
+        final EmployeeEvent event = new EmployeeDeletedEvent(employeeId);
+        final OutgoingKafkaRecordMetadata<String> metadata = OutgoingKafkaRecordMetadata.<String>builder()
+                .withTopic("employee-events")
+                .withKey(employeeId)
+                .build();
+        eventEmitter.send(Message.of(event).addMetadata(metadata));
     }
 }

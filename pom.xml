@@ -37,6 +37,7 @@
     <modules>
         <module>employee-registration</module>
         <module>employee-indexing</module>
+        <module>employee-events</module>
     </modules>
 
 </project>
