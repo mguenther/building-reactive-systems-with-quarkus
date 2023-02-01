@@ -13,7 +13,7 @@ If you want to learn more about Quarkus, be sure to check out its [website](http
 
 ## Running the application
 
-TODO: You'll need a working local setup of Apache Kafka and Apache Solr. You can use the `Dockerfile`s that come with this repository to do so.
+You'll need a locally running Apache Kafka and Apache Solr. We provide a `docker-compose` script for your convenience that sets up a single Kafka broker and a Solr server with a pre-defined core (document collection). See the `docker-compose.yml` script in directory `docker`.
 
 To see the event publication and consumption in action, you'll need to alter the state in some way. This can be done by creating a new employee record using the HTTP API of the employee registration service. This triggers the publication of an event that encapsulates the relevant state changes. The employee indexing service will pick that event up and update the Solr index as appropriate.
 
