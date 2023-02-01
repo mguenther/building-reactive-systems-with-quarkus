@@ -2,9 +2,6 @@ package net.mguenther.reactive.employee;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
-import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 
 public class EmployeeCreatedEvent extends EmployeeEvent {
 
@@ -65,17 +62,5 @@ public class EmployeeCreatedEvent extends EmployeeEvent {
 
     public String getCompany() {
         return company;
-    }
-
-    public static void main(String[] args) throws Exception {
-
-        ObjectMapper mapper = new ObjectMapper();
-        PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator.builder().build();
-        mapper.activateDefaultTyping(ptv); // default to using DefaultTyping.OBJECT_AND_NON_CONCRETE
-        mapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.NON_FINAL);
-        EmployeeCreatedEvent event = new EmployeeCreatedEvent("1", "Max", "Mustermann", "max.mustermann@musterhaus.de", "Musterabteilung", "Mustererkennung", "Musterfirma");
-        String s = mapper.writeValueAsString(event);
-        EmployeeEvent e = mapper.readValue(s, EmployeeEvent.class);
-        System.out.println(e);
     }
 }
